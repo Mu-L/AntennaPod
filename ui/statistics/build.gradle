@@ -4,12 +4,17 @@ plugins {
 apply from: "../../common.gradle"
 apply from: "../../playFlavor.gradle"
 
+android {
+    namespace "de.danoeh.antennapod.ui.statistics"
+}
+
 dependencies {
-    implementation project(":core")
     implementation project(":event")
     implementation project(":model")
+    implementation project(':storage:database')
     implementation project(":ui:app-start-intent")
     implementation project(":ui:common")
+    implementation project(":ui:echo")
 
     annotationProcessor "androidx.annotation:annotation:$annotationVersion"
     implementation "androidx.appcompat:appcompat:$appcompatVersion"
@@ -23,6 +28,4 @@ dependencies {
     implementation "com.github.bumptech.glide:glide:$glideVersion"
     implementation "io.reactivex.rxjava2:rxandroid:$rxAndroidVersion"
     implementation "io.reactivex.rxjava2:rxjava:$rxJavaVersion"
-    implementation "com.joanzapata.iconify:android-iconify-fontawesome:$iconifyVersion"
-    implementation "com.joanzapata.iconify:android-iconify-material:$iconifyVersion"
 }

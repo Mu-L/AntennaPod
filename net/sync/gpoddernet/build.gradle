@@ -3,8 +3,12 @@ plugins {
 }
 apply from: "../../../common.gradle"
 
+android {
+    namespace "de.danoeh.antennapod.net.sync.gpoddernet"
+}
+
 dependencies {
-    implementation project(':net:sync:model')
+    implementation project(':net:sync:service-interface')
 
     annotationProcessor "androidx.annotation:annotation:$annotationVersion"
     implementation "androidx.appcompat:appcompat:$appcompatVersion"

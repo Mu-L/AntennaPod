@@ -40,6 +40,7 @@ public class FeedPreferences implements Serializable {
     public enum NewEpisodesAction {
         GLOBAL(0),
         ADD_TO_INBOX(1),
+        ADD_TO_QUEUE(3),
         NOTHING(2);
 
         public final int code;
@@ -58,10 +59,57 @@ public class FeedPreferences implements Serializable {
         }
     }
 
+    public enum SkipSilence {
+        OFF(0), GLOBAL(1), AGGRESSIVE(2);
+
+        public final int code;
+
+        SkipSilence(int code) {
+            this.code = code;
+        }
+
+        public static SkipSilence fromCode(int code) {
+            for (SkipSilence s : values()) {
+                if (s.code == code) {
+                    return s;
+                }
+            }
+            return GLOBAL;
+        }
+    }
+
+    public enum AutoDownloadSetting {
+        DISABLED(0),
+        ENABLED(2),
+        GLOBAL(1);
+
+        public final int code;
+
+        AutoDownloadSetting(int code) {
+            this.code = code;
+        }
+
+        public static AutoDownloadSetting fromInteger(int code) {
+            for (AutoDownloadSetting setting : values()) {
+                if (code == setting.code) {
+                    return setting;
+                }
+            }
+            return GLOBAL;
+        }
+
+        public static AutoDownloadSetting fromBoolean(boolean enabled) {
+            if (enabled) {
+                return ENABLED;
+            }
+            return DISABLED;
+        }
+    }
+
     @NonNull
     private FeedFilter filter;
     private long feedID;
-    private boolean autoDownload;
+    private AutoDownloadSetting autoDownload;
     private boolean keepUpdated;
     private AutoDeleteAction autoDeleteAction;
     private VolumeAdaptionSetting volumeAdaptionSetting;
@@ -71,20 +119,22 @@ public class FeedPreferences implements Serializable {
     private float feedPlaybackSpeed;
     private int feedSkipIntro;
     private int feedSkipEnding;
+    private SkipSilence feedSkipSilence;
     private boolean showEpisodeNotification;
     private final Set<String> tags = new HashSet<>();
 
-    public FeedPreferences(long feedID, boolean autoDownload, AutoDeleteAction autoDeleteAction,
+    public FeedPreferences(long feedID, AutoDownloadSetting autoDownload, AutoDeleteAction autoDeleteAction,
                            VolumeAdaptionSetting volumeAdaptionSetting, NewEpisodesAction newEpisodesAction,
                            String username, String password) {
         this(feedID, autoDownload, true, autoDeleteAction, volumeAdaptionSetting, username, password,
-                new FeedFilter(), SPEED_USE_GLOBAL, 0, 0, false, newEpisodesAction, new HashSet<>());
+                new FeedFilter(), SPEED_USE_GLOBAL, 0, 0, SkipSilence.GLOBAL,
+                false, newEpisodesAction, new HashSet<>());
     }
 
-    public FeedPreferences(long feedID, boolean autoDownload, boolean keepUpdated,
+    public FeedPreferences(long feedID, AutoDownloadSetting autoDownload, boolean keepUpdated,
                             AutoDeleteAction autoDeleteAction, VolumeAdaptionSetting volumeAdaptionSetting,
                             String username, String password, @NonNull FeedFilter filter,
-                            float feedPlaybackSpeed, int feedSkipIntro, int feedSkipEnding,
+                            float feedPlaybackSpeed, int feedSkipIntro, int feedSkipEnding, SkipSilence feedSkipSilence,
                             boolean showEpisodeNotification, NewEpisodesAction newEpisodesAction,
                             Set<String> tags) {
         this.feedID = feedID;
@@ -98,6 +148,7 @@ public class FeedPreferences implements Serializable {
         this.feedPlaybackSpeed = feedPlaybackSpeed;
         this.feedSkipIntro = feedSkipIntro;
         this.feedSkipEnding = feedSkipEnding;
+        this.feedSkipSilence = feedSkipSilence;
         this.showEpisodeNotification = showEpisodeNotification;
         this.newEpisodesAction = newEpisodesAction;
         this.tags.addAll(tags);
@@ -127,25 +178,6 @@ public class FeedPreferences implements Serializable {
     }
 
     /**
-     * Compare another FeedPreferences with this one. The feedID, autoDownload and AutoDeleteAction attribute are excluded from the
-     * comparison.
-     *
-     * @return True if the two objects are different.
-     */
-    public boolean compareWithOther(FeedPreferences other) {
-        if (other == null) {
-            return true;
-        }
-        if (!TextUtils.equals(username, other.username)) {
-            return true;
-        }
-        if (!TextUtils.equals(password, other.password)) {
-            return true;
-        }
-        return false;
-    }
-
-    /**
      * Update this FeedPreferences object from another one. The feedID, autoDownload and AutoDeleteAction attributes are excluded
      * from the update.
      */
@@ -164,12 +196,30 @@ public class FeedPreferences implements Serializable {
         this.feedID = feedID;
     }
 
-    public boolean getAutoDownload() {
-        return autoDownload;
+    /**
+     * This function returns the calculated auto-download state for the given FeedPreference.
+     * By supplying the global default, the returned value will present the actionable state of the
+     * download-state choosen by the user. No further checks need to be made.
+     * @param globalDefault Global Setting for automatic downloading of items.
+     * @return whether this item should be downloaded
+     */
+    public boolean isAutoDownload(boolean globalDefault) {
+        return switch (this.autoDownload) {
+            case ENABLED -> true;
+            case DISABLED -> false;
+            default -> globalDefault;
+        };
     }
 
-    public void setAutoDownload(boolean autoDownload) {
-        this.autoDownload = autoDownload;
+    /**
+     * @return The autodownload settings value for this item.
+     */
+    public AutoDownloadSetting getAutoDownload() {
+        return this.autoDownload;
+    }
+
+    public void setAutoDownload(AutoDownloadSetting setting) {
+        this.autoDownload = setting;
     }
 
     public AutoDeleteAction getAutoDeleteAction() {
@@ -238,6 +288,17 @@ public class FeedPreferences implements Serializable {
 
     public int getFeedSkipEnding() {
         return feedSkipEnding;
+    }
+
+    public void setFeedSkipSilence(SkipSilence skipSilence) {
+        feedSkipSilence = skipSilence;
+    }
+
+    public SkipSilence getFeedSkipSilence() {
+        if (feedPlaybackSpeed == SPEED_USE_GLOBAL) {
+            return SkipSilence.GLOBAL;
+        }
+        return feedSkipSilence;
     }
 
     public Set<String> getTags() {
